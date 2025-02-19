@@ -2,3 +2,11 @@ Django==4.2.7
 djangorestframework==3.14.0
 gunicorn==21.2.0
 psycopg2-binary==2.9.9
+requests
+djangorestframework-simplejwt
+django-cors-headers
+django-allauth
+django-rest-framework-social-oauth2
+google-auth 
+google-auth-oauthlib 
+google-auth-httplib2
