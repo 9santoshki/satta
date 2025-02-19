@@ -5,6 +5,10 @@ from rest_framework.response import Response  # Import Response
 from rest_framework.views import APIView
 import requests
 from django.conf import settings
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from .models import UserProfile
 
 @method_decorator(csrf_exempt, name='dispatch')  # Disable CSRF for testing
 class GoogleLoginView(APIView):
@@ -51,3 +55,34 @@ class GoogleLoginView(APIView):
 
         except requests.exceptions.RequestException as e:
             return JsonResponse({"error": f"Error verifying Google token: {str(e)}"}, status=500)
+
+
+
+class DepositMoney(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def post(self, request):
+        user = request.user  # Get the authenticated user
+        amount = request.data.get("amount")
+
+        if not amount or amount <= 0:
+            return Response({"detail": "Invalid deposit amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_profile = get_object_or_404(UserProfile, id=user.id)
+            user_profile.deposit(amount)  # Add the amount to the user's balance
+            return Response({"balance": str(user_profile.balance)}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetBalance(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        try:
+            user_profile = UserProfile.objects.get(id=user.id)
+            return Response({"balance": str(user_profile.balance)}, status=status.HTTP_200_OK)
+        except UserProfile.DoesNotExist:
+            return Response({"detail": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)

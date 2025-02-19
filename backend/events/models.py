@@ -14,7 +14,8 @@ class Event(models.Model):
         ('completed', 'Completed'),
     ]
     status = models.CharField(max_length=20, choices=status_choices, default='upcoming')
-    
+    betting_end_time = models.DateTimeField()
+
     def __str__(self):
         return self.title
 
@@ -26,6 +27,7 @@ class Outcome(models.Model):
     title = models.CharField(max_length=255)
     odds = models.DecimalField(max_digits=5, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+    total_bets = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
     def __str__(self):
         return f"{self.title} ({self.odds})"

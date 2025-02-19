@@ -39,6 +39,10 @@ logs-frontend: ## Tail the frontend logs
 migrate: ## Apply Django migrations
 	$(DOCKER_COMPOSE) exec $(SERVICE_BACKEND) python manage.py migrate
 
+# Make new migrations (generate migration files)
+makemigrations: ## Create new migrations for Django models
+	$(DOCKER_COMPOSE) exec $(SERVICE_BACKEND) python manage.py makemigrations
+
 # Create a Django superuser
 createsuperuser: ## Create a superuser for Django admin
 	$(DOCKER_COMPOSE) exec $(SERVICE_BACKEND) python manage.py createsuperuser
@@ -61,6 +65,7 @@ help: ## Show this help message
 	@echo "  make logs-backend      Tail the backend logs"
 	@echo "  make logs-frontend     Tail the frontend logs"
 	@echo "  make migrate           Apply Django migrations"
+	@echo "  make makemigrations    Create new migrations for Django models"
 	@echo "  make createsuperuser   Create a superuser for Django admin"
 	@echo "  make status            Show the status of Docker containers"
 	@echo "  make prune             Clean up unused Docker containers and images"
