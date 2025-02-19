@@ -1,54 +1,53 @@
-import google.auth.transport.requests
-import google.oauth2.id_token
-from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.response import Response  # Import Response
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.authtoken.models import Token
-from .serializers import UserProfileSerializer
-from .models import UserProfile
+import requests
+from django.conf import settings
 
+@method_decorator(csrf_exempt, name='dispatch')  # Disable CSRF for testing
 class GoogleLoginView(APIView):
+    def options(self, request, *args, **kwargs):
+        response = JsonResponse({}, status=200)  # Use JsonResponse
+        response["Access-Control-Allow-Origin"] = settings.CORS_ALLOWED_ORIGINS[0]  # Use correct domain
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
+
     def post(self, request):
         token = request.data.get('token')
         if not token:
-            return Response({"error": "Google token is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({"error": "Google token is required."}, status=400)
 
         try:
-            # Verify the Google ID token
-            request_adapter = google.auth.transport.requests.Request()
-            google_user_info = google.oauth2.id_token.verify_oauth2_token(
-                token, request_adapter
-            )
+            google_response = requests.get(f"https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={token}")
+            
+            if google_response.status_code != 200:
+                return JsonResponse({"error": "Invalid Google token."}, status=400)
 
-            if not google_user_info:
-                return Response({"error": "Invalid Google token."}, status=status.HTTP_400_BAD_REQUEST)
+            google_user_info = google_response.json()
+            
+            # Ensure necessary fields exist
+            if not all(key in google_user_info for key in ['sub', 'email', 'given_name', 'family_name']):
+                return JsonResponse({"error": "Missing required Google user info."}, status=400)
 
-            # Ensure required fields exist
-            email = google_user_info.get("email")
-            first_name = google_user_info.get("given_name", "")
-            last_name = google_user_info.get("family_name", "")
-            google_id = google_user_info.get("sub")
-
-            if not email or not google_id:
-                return Response({"error": "Missing required user info."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Check if user exists or create new one
+            # Find or create user
+            from django.contrib.auth import get_user_model
             user, created = get_user_model().objects.get_or_create(
-                username=google_id,
-                defaults={"email": email, "first_name": first_name, "last_name": last_name}
+                username=google_user_info['sub'],
+                defaults={'email': google_user_info['email'], 'first_name': google_user_info['given_name'], 'last_name': google_user_info['family_name']}
             )
-
             if created:
                 user.set_unusable_password()
                 user.save()
 
-            # Generate authentication token for the user
-            token, _ = Token.objects.get_or_create(user=user)
+            # Return JSON with explicit CORS headers
+            response = JsonResponse({"message": "Login successful", "user": google_user_info}, status=200)
+            response["Access-Control-Allow-Origin"] = settings.CORS_ALLOWED_ORIGINS[0]  # Use frontend URL
+            response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
 
-            return Response({"token": token.key, "user": UserProfileSerializer(user).data}, status=status.HTTP_200_OK)
-
-        except ValueError:
-            return Response({"error": "Invalid or expired Google token."}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({"error": f"Error verifying Google token: {str(e)}"}, status=500)

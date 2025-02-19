@@ -6,11 +6,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend:/app:cached
     environment:
       - DEBUG=1
     depends_on:
       - db
+    restart: always
 
   db:
     image: postgres:15
@@ -22,15 +23,19 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: always
 
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app:cached
     depends_on:
       - backend
+    restart: always
+    environment:
+      - DEBUG=1
 
 volumes:
   pgdata:
