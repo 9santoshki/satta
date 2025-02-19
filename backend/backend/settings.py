@@ -57,6 +57,7 @@ CORS_ALLOWED_ORIGINS = [
 
     # Add other URLs if needed
 ]
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
