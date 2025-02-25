@@ -10,3 +10,5 @@ django-rest-framework-social-oauth2
 google-auth 
 google-auth-oauthlib 
 google-auth-httplib2
+dj-rest-auth
+python-dotenv

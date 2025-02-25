@@ -1,10 +1,9 @@
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
-from django.utils import timezone
 
 class UserProfile(AbstractUser):
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Increased max_digits for larger balances
-    # Add any additional fields if necessary, like address, phone number, etc.
+    # Balance field for users
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Larger balance support
 
     groups = models.ManyToManyField(
         Group,
@@ -18,7 +17,7 @@ class UserProfile(AbstractUser):
     )
 
     def __str__(self):
-        return self.username
+        return f"UserProfile: {self.username} (Balance: {self.balance})"
 
     def deposit(self, amount: float):
         """Add a deposit to the user's balance."""
@@ -36,10 +35,7 @@ class UserProfile(AbstractUser):
         self.balance -= amount
         self.save()
 
-    def get_balance(self):
-        """Returns the current balance."""
-        return self.balance
-
     class Meta:
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'
+        ordering = ['username']  # Default ordering by username
